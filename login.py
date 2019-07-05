@@ -1,41 +1,84 @@
+from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPDigestAuth
+from datetime import datetime
 import urllib.request
-from http.client import HTTPSConnection
-from base64 import b64encode
 import requests
+import sqlite3
+from sqlite3 import Error
 
-#출처: https://hack4profit.tistory.com/27 [hack4profit]
-def CookieTest() :
-    url = "http://192.168.0.101/basic/basic.php"
-    login_form = {"id":"admin", "pw":"admin"}
-    login_req = urllib.urlencode(login_form)
-    request = urllib2.Request(url, login_req)
-    response = urllib2.urlopen(request)
-    cookie = response.headers.get('Set-Cookie')
+def create_connection(db_file):
+    try:
+        conn = sqlite3.connect(db_file)
+        return conn
+    except Error as e:
+        print(e)
+    return None
 
-    request = urllib2.Request("http://192.168.0.101/system/time.php?app=get")
-    request.add_header('cookie', cookie)
-    response = urllib2.urlopen(request)
-    print( response.read() )
+# Manual Datetime Setting(HiTron)
+def Set_DateTime(IpAddr) :   
+    res = requests.get('http://' + IpAddr + '/basic/basic.php', auth=('admin', 'admin'))
+    if (res.status_code==200) :
+        now = datetime.now() 
+        url1 = "http://" + IpAddr + "/system/time.php?app=set&tsyncmode=0&tzone=72&dst_enable=0&dt=" + now.strftime('%Y-%m-%d') + "&tm=" + now.strftime('%H:%M:%S')
+        res = requests.get(url1,auth=('admin', 'admin') )
+        print( res.text )
+    else :
+        print( "Not Support Device = " + IpAddr)
 
-def main():
-    with requests.Session() as s:
-        response = s.get('http://192.168.0.101/basic/basic.php', auth=('admin', 'admin'))
-        cookie = response.headers.get('Set-Cookie')
-        print(response.status_code)
-        response = s.get( 'http://192.168.0.101/system/time.php?app=get' )
-        print( response.text ) 
+# NTP Server Setting (Hitron)
+def Ser_NTP_Server(IpAddr,NTP_Server) :   
+    res = requests.get('http://' + IpAddr + '/basic/basic.php', auth=('admin', 'admin'))
+    if (res.status_code==200) :
+        now = datetime.now() 
+        url1 = "http://" + IpAddr + "/system/time.php?app=set&tsyncmode=2&tzone=72&dst_enable=0&ntp_server=" + NTP_Server
+        res = requests.get(url1,auth=('admin', 'admin') )
+        print( res.text )
+    else :
+        print( "Not Support Device = " + IpAddr)
 
-        request = request("http://192.168.0.101/system/time.php?app=get")
-        request.add_header('cookie', cookie)
-        response = request.urlopen(request)
-        print( response.read() )
+# NTP Server Setting (LG)
+def Ser_NTP_Server_LG(IpAddr,NTP_Server) :   
+    res = requests.get('http://' + IpAddr + '/basic/basic.php', auth=('admin', 'admin'))
+    if (res.status_code==200) :
+        now = datetime.now() 
+        url1 = "http://" + IpAddr + "/httpapi?SetDateTimeConfig&dateTimeMode=DATETIME_MODE_AUTO&interval=NTP_INTERVAL_ONE_DAY&serverAddress=" + NTP_Server
+        res = requests.get(url1,auth=('admin', 'admin') )
+        print( res.text )
+    else :
+        print( "Not Support Device = " + IpAddr)
 
+
+
+def AuthTest():
+#    res = requests.get('http://192.168.0.101/basic/basic.php', auth=HTTPBasicAuth('admin', 'admin'))
+#    res = requests.get('http://192.168.0.101/basic/basic.php', auth=HTTPDigestAuth('admin', 'admin'))
+# OAuth2 Authentication，先安装requests-oauthlib
+#    url = 'https://api.twitter.com/1.1/account/verify_credentials.json'
+#    auth = OAuth2('YOUR_APP_KEY', 'YOUR_APP_SECRET', 'USER_OAUTH_TOKEN')
+#    requests.get(url, auth=auth)
+    res = requests.get('http://192.168.0.101/basic/basic.php', auth=('admin', 'admin'))
+    print(res.status_code)
+    res = requests.get("http://192.168.0.101/system/time.php?app=get",auth=('admin', 'admin') )
+    print( res.text )
+    data1 = { 'app':'set' , 'dt':'2019-07-05' }
+    res = requests.get("http://192.168.0.101/system/time.php",params=data1,auth=('admin', 'admin') )
+    print( res.text )
+    res = requests.get("http://192.168.0.101/system/time.php?app=get",auth=('admin', 'admin') )
+    print( res.text )
+
+def main() :
+    conn = create_connection("CameraStatus.db")
+    cur = conn.cursor()
+    cur.execute("SELECT seq,prevName,name,CheckTime,curr_ip_addr FROM CameraUpdate  Where append = '변경' and CheckTime > '2018/10/02'")
+    rows = cur.fetchall()
+    for row in rows :
+        print("시간설정중 : " + str(row[1])  )
+        Set_DateTime( str(row[2]) )    
+    conn.close()  
 
 if __name__ == '__main__':
-    main()
+#    main()
+    Set_DateTime('192.168.0.101')
 
-# 200 <div lang=EN-US style='font-size:24.0pt;font-family:Times New Roman;'>
-# <b>401 Unauthorized</b></div></br><div lang=EN-US style='font-size:12.0pt;font-family:Times New Roman;'>
-# You must enter a valid login ID and password to access this resource.</div>
 
 
