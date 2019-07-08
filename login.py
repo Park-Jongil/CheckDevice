@@ -19,9 +19,12 @@ def Set_DateTime(IpAddr) :
     res = requests.get('http://' + IpAddr + '/basic/basic.php', auth=('admin', 'admin'))
     if (res.status_code==200) :
         now = datetime.now() 
-        url1 = "http://" + IpAddr + "/system/time.php?app=set&tsyncmode=0&tzone=72&dst_enable=0&dt=" + now.strftime('%Y-%m-%d') + "&tm=" + now.strftime('%H:%M:%S')
+        url1 = "http://" + IpAddr + "/system/time.php?app=set&tsyncmode=0&tzone=62&dst_enable=0&dt=" + now.strftime('%Y-%m-%d') + "&tm=" + now.strftime('%H:%M:%S')
         res = requests.get(url1,auth=('admin', 'admin') )
-        print( res.text )
+        if (res.status_code==200) :
+            print( "DateTime Set Success Device = " + IpAddr)
+        else :
+            print( "DateTime Set Failure Device = " + IpAddr)
     else :
         print( "Not Support Device = " + IpAddr)
 
@@ -30,11 +33,28 @@ def Ser_NTP_Server(IpAddr,NTP_Server) :
     res = requests.get('http://' + IpAddr + '/basic/basic.php', auth=('admin', 'admin'))
     if (res.status_code==200) :
         now = datetime.now() 
-        url1 = "http://" + IpAddr + "/system/time.php?app=set&tsyncmode=2&tzone=72&dst_enable=0&ntp_server=" + NTP_Server
+        url1 = "http://" + IpAddr + "/system/time.php?app=set&tsyncmode=2&tzone=62&dst_enable=0&ntp_server=" + NTP_Server
         res = requests.get(url1,auth=('admin', 'admin') )
         print( res.text )
     else :
         print( "Not Support Device = " + IpAddr)
+
+# Manual Datetime Setting(HiTron)
+def Set_DateTime_LG(IpAddr) :   
+    res = requests.get('http://' + IpAddr + '/basic/basic.php', auth=('admin', 'admin'))
+    if (res.status_code==200) :
+        now = datetime.now() 
+        datestr = "&year=" + str(now.year) + "&month=" + str(now.month) + "&day=" + str(now.day) 
+        timestr = "&hour=" + str(now.hour) + "&minute=" + str(now.minute) + "&second=" + str(now.second) 
+        url1 = "http://" + IpAddr + "/httpapi?SetDateTimeConfig&dateTimeMode=DATETIME_MODE_MANUAL" + datestr + timestr
+        res = requests.get(url1,auth=('admin', 'admin') )
+        if (res.status_code==200) :
+            print( "DateTime Set Success Device = " + IpAddr)
+        else :
+            print( "DateTime Set Failure Device = " + IpAddr)
+    else :
+        print( "Not Support Device = " + IpAddr)
+
 
 # NTP Server Setting (LG)
 def Ser_NTP_Server_LG(IpAddr,NTP_Server) :   
@@ -46,7 +66,6 @@ def Ser_NTP_Server_LG(IpAddr,NTP_Server) :
         print( res.text )
     else :
         print( "Not Support Device = " + IpAddr)
-
 
 
 def AuthTest():
@@ -69,16 +88,19 @@ def AuthTest():
 def main() :
     conn = create_connection("CameraStatus.db")
     cur = conn.cursor()
-    cur.execute("SELECT seq,prevName,name,CheckTime,curr_ip_addr FROM CameraUpdate  Where append = '변경' and CheckTime > '2018/10/02'")
+    cur.execute("SELECT seq,assets_name,equip_ip FROM tbl_CameraInfo ")
     rows = cur.fetchall()
     for row in rows :
-        print("시간설정중 : " + str(row[1])  )
-        Set_DateTime( str(row[2]) )    
+        print("시간설정중 : " + str(row[1]) + " [" + str(row[2]) + "]" )
+#        Set_DateTime( str(row[2]) )    
     conn.close()  
 
 if __name__ == '__main__':
-#    main()
-    Set_DateTime('192.168.0.101')
+    main()
+#    Set_DateTime('192.168.0.101')
+#    Ser_NTP_Server('192.168.0.101','192.168.0.1')
+#    res = requests.get("http://192.168.0.101/system/time.php?app=get",auth=('admin', 'admin') )
+#    print( res.text )
 
 
 
